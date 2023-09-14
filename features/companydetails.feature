@@ -9,4 +9,3 @@ Feature: get company details
       |actualize consulting pvt.ltd|
       |      aroha technologies    |
       |    microsoft corporations  |
-      |              TCS           |
