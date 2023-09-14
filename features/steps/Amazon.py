@@ -1,84 +1,100 @@
-from behave import *
+# fetch_company_details.py
+import re
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as ec
+from selenium.webdriver.common.keys import Keys
+import time
+import csv
+from behave import *
 
-'''-----------all the locators-------------'''
-Locators = {"search_box": "twotabsearchtextbox",
-            "search_button": "//input[@value='Go']",
-            "rating_review_span_class": "span.a-icon-alt",
-            "RATINGS": "//li[@id='p_72/1318476031']",
-            "laptop_list_div": "//span[@class='a-size-medium a-color-base a-text-normal']",
-            "add_to_cart_button": '//input[@id="add-to-cart-button"]',
-            "Price_tag": '//span[@class="a-price-whole"][1]',
-            "cart_icon": '//div[@id="nav-cart-count-container"]',
-            "total_price": '//span[@id="sc-subtotal-amount-activecart"]'
-            }
-'''----------------------------------------------'''
+# Set up the Selenium WebDriver (assuming you have installed the appropriate driver for your browser)
+tag={
+    "INPUT AREA" : '//textarea[@id="APjFqb"]',
+    "REVIEWS"  : '//div[@class="CJQ04"]/div/span[@class="hqzQac"]/span/a',
+    "ADDRESS"  :'//span[@class="LrzXr"]',
+    "RATINGS"  : '//div[@class="CJQ04"]/div/span[@class="Aq14fc"]',
+    "NAME" :"//div[@class='SPZz6b']/h2/span"
 
-amount = []  # -----empty list to add the amount
+}
 
 
-@given("the Customer is on the Amazon.in homepage")
-def amazon_login(context):
-    context.wait = WebDriverWait(context.driver, 100)
-    context.driver.get("https://www.amazon.in/")
 
 
-@when('the Customer searches for "{search_query}"')
-def search_for_laptops(context, search_query):
+# BDD Steps
+company_details=[]
+@given("the user is on the Google search page")
+def step_user_on_google_search_page(context):
 
-    """searching the product in the search tab"""
-
-    search_box = context.driver.find_element(By.ID, Locators["search_box"])
-    search_box.send_keys(search_query)
-    search_button = context.driver.find_element(By.XPATH, Locators["search_button"])
-    search_button.click()
-
-
-@then('the Customer adds "{number}" highly-rated Dell laptops to the cart')
-def add_laptops_to_cart(context, number):
-
-    """ Filtering Laptop More than Four Rating """
-
-    context.wait.until(ec.element_to_be_clickable((By.XPATH, Locators["RATINGS"]))).click()
-    parent_window = context.driver.current_window_handle  # for storing the parent windows id
-    products = context.wait.until(ec.presence_of_all_elements_located((By.XPATH, Locators["laptop_list_div"])))  # storing all the products
-
-    """ clicking each product and adding it to cart"""
-
-    for i in range(1, int(number)+1):  # iterate over product list
-        products[i].click()
-        windows = context.driver.window_handles  # storing the child windows address
-        context.driver.switch_to.window(windows[1])  # switching to the child window to add the product to cart
-
-        price_element = context.driver.find_element(By.XPATH, Locators["Price_tag"])  # price web-element of laptop
-        p = price_element.get_attribute("innerHTML")  # price of laptop
-        amount.append(p.replace('<span class="a-price-decimal">.</span>', ""))  # adding the amount to the list for sum
-
-        context.wait.until(ec.presence_of_element_located((By.XPATH, Locators["add_to_cart_button"]))).click()  # adding the product to cart
-        context.wait.until(ec.visibility_of_element_located((By.XPATH, "//*[@id='attachDisplayAddBaseAlert']")))  # waiting for a element to confirm that product is added
-
-        context.driver.close()
-        context.driver.switch_to.window(parent_window) # after every iteration completed we switch to parent window for going to next item
+    # Navigate to Google search page
+    context.driver.get("https://www.google.com")
+    context.driver.maximize_window()
 
 
-@then("the Customer verifies the total price in the cart")
-def price_compare(context):
-    """going to cart button to see the final price"""
-    cart_button = context.driver.find_element(By.XPATH, Locators["cart_icon"])
-    cart_button.click()
 
-    """extracting the price that displayed on the cart"""
-
-    price = context.wait.until(ec.presence_of_element_located((By.XPATH, Locators["total_price"])))
-    final_price = price.text
-    final_price = float(final_price.replace(",", ""))
-    total_amount = sum(float(x.replace(',', '')) for x in amount)
-
-    assert final_price == total_amount, "Total price in cart does not match with expected."  # checking the final price is same or not
+@when('the user searches for "{company_name}"')
+def step_user_searches_for(context, company_name):
+    # Enter the search term and perform the search
+    company = context.driver.find_element(By.XPATH,tag["INPUT AREA"] )
+    company.send_keys(company_name)
+    company.send_keys(Keys.RETURN)
+    time.sleep(2)
 
 
-@then('the Customer closes the browser')
-def close_browser(context):
-    context.driver.quit()
+@then("the user extracts the company details")
+def step_user_extracts_company_details(context):
+    dict={}
+    # Extract company details and store them in company_details list
+    try:
+        company_name = context.driver.find_element(By.XPATH,tag["NAME"])
+        dict["company"] = company_name.text
+    except:
+        dict["company"] = "not found"
+    try:
+        company_add = context.driver.find_element(By.XPATH,tag["ADDRESS"] )
+        dict["address"] = company_add.text
+    except:
+        dict["address"] = "not found"
+    try:
+        reviews = context.driver.find_element(By.XPATH,tag["REVIEWS"] )
+        dict["reviews"] = reviews.text
+    except:
+        dict["reviews"] = "not found"
+    try:
+        ratings = context.driver.find_element(By.XPATH,tag["RATINGS"] )
+        dict["ratings"] = ratings.text
+    except:
+        dict["ratings"] = "not found"
+
+
+    else:
+        try:
+            context.driver.find_element(By.XPATH, "(//*[@class='lu-fs'])[2]").click()
+            url = context.driver.current_url
+            pattern = r'@([0-9.-]+,[0-9.-]+,[0-9a-zA-Z]+)'
+            matches = re.search(pattern, url)
+            dict["latitude and longitude"] = matches.group(1)
+            time.sleep(3)
+        except:
+            dict["latitude and longitude"]="not found"
+
+    company_details.append(dict)
+
+
+@then("the user saves the company details to a CSV file")
+def step_user_saves_company_details_to_csv(context):
+    # Specify the CSV file path
+    csv_file_path = 'company_details2.csv'
+
+    # Extract the keys from the first dictionary in the list (assuming all dictionaries have the same keys)
+    field_names = company_details[0].keys()
+
+    # Write data to CSV
+    with open(csv_file_path, 'w', newline='', encoding='utf-8') as csv_file:
+        writer = csv.DictWriter(csv_file, fieldnames=field_names)
+        writer.writeheader()
+        writer.writerows(company_details)
+
+    print(f"Data has been successfully written to {csv_file_path}")
+
+
+
+
