@@ -36,8 +36,8 @@ def search_for_laptops(context, search_query):
     search_button.click()
 
 
-@then("the Customer adds three highly-rated Dell laptops to the cart")
-def add_laptops_to_cart(context):
+@then('the Customer adds "{number}" highly-rated Dell laptops to the cart')
+def add_laptops_to_cart(context, number):
 
     """ Filtering Laptop More than Four Rating """
 
@@ -47,7 +47,7 @@ def add_laptops_to_cart(context):
 
     """ clicking each product and adding it to cart"""
 
-    for i in range(1, 5):  # iterate over product list
+    for i in range(1, int(number)+1):  # iterate over product list
         products[i].click()
         windows = context.driver.window_handles  # storing the child windows address
         context.driver.switch_to.window(windows[1])  # switching to the child window to add the product to cart
